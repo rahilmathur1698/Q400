@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RTOW Calculator</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 750px;
+      margin: auto;
+      background: #f9f9f9;
+    }
+
+    h1, h2 {
+      text-align: center;
+      color: #333;
+    }
+
+    label {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    input[type="number"], button {
+      width: 100%;
+      padding: 10px;
+      margin: 6px 0 12px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .result, .notes {
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+
+    .result p, .notes p {
+      margin: 8px 0;
+    }
+
+    .notes code {
+      display: block;
+      background: #eee;
+      padding: 10px;
+      margin: 10px 0;
+      border-left: 4px solid #007BFF;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <h1>RTOW Calculator</h1>
+
+  <label for="plw">PLW (kg):</label>
+  <input type="number" id="plw" placeholder="Enter PLW">
+
+  <label for="qnh">QNH (hPa):</label>
+  <input type="number" id="qnh" placeholder="Enter QNH (e.g. 1015)">
+
+  <label for="x">QNH Correction Factor (X):</label>
+  <input type="number" id="x" placeholder="Enter Correction Factor (X)">
+
+  <label for="cdl">CDL Penalty (kg):</label>
+  <input type="number" id="cdl" placeholder="Enter CDL Penalty">
+
+  <label for="tripFuel">Trip Fuel (kg):</label>
+  <input type="number" id="tripFuel" placeholder="Enter Trip Fuel">
+
+  <label for="takeoffFuel">Takeoff Fuel (kg):</label>
+  <input type="number" id="takeoffFuel" placeholder="Enter Takeoff Fuel">
+
+  <label for="azfw">AZFW (kg):</label>
+  <input type="number" id="azfw" placeholder="Enter AZFW">
+
+  <button onclick="calculateRTOW()">Calculate</button>
+
+  <div class="result" id="result"></div>
+
+  <div class="notes">
+    <h2>📝 Notes: RTOW Calculation Formulas</h2>
+
+    <p><strong>Constants:</strong></p>
+    <ul>
+      <li>OLW = 28009 kg</li>
+      <li>MZFW = 25855 kg</li>
+    </ul>
+
+    <p><strong>Step 1: Calculate OTOW</strong></p>
+    <code>
+OTOW = PLW - ((1013 - QNH) × X) - CDL Penalty
+    </code>
+
+    <p><strong>Step 2: Calculate 3 Options</strong></p>
+    <code>
+Option 1 = OTOW  
+Option 2 = OLW + Trip Fuel  
+Option 3 = MZFW + Takeoff Fuel
+    </code>
+
+    <p><strong>Step 3: RTOW is the minimum of the three options</strong></p>
+    <code>
+RTOW = min(Option 1, Option 2, Option 3)
+    </code>
+
+    <p><strong>Step 4: Extra Fuel (only if Option 3 is the minimum)</strong></p>
+    <code>
+Extra Fuel = min(Option 1, Option 2) - Option 3
+    </code>
+
+    <p><strong>Step 5: Total Fuel</strong></p>
+    <code>
+Total Fuel = min(Option 1, Option 2) - AZFW
+    </code>
+  </div>
+
+  <script>
+    function calculateRTOW() {
+      const plw = parseFloat(document.getElementById('plw').value);
+      const qnh = parseFloat(document.getElementById('qnh').value);
+      const x = parseFloat(document.getElementById('x').value);
+      const cdl = parseFloat(document.getElementById('cdl').value);
+      const tripFuel = parseFloat(document.getElementById('tripFuel').value);
+      const takeoffFuel = parseFloat(document.getElementById('takeoffFuel').value);
+      const azfw = parseFloat(document.getElementById('azfw').value);
+
+      if ([plw, qnh, x, cdl, tripFuel, takeoffFuel, azfw].some(val => isNaN(val))) {
+        document.getElementById('result').innerHTML = "<p>Please fill in all fields with valid numbers.</p>";
+        return;
+      }
+
+      const olw = 28009;
+      const mzfw = 25855;
+
+      // Calculate OTOW based on QNH correction
+      const otow = plw - ((1013 - qnh) * x) - cdl;
+
+      const option1 = otow;
+      const option2 = olw + tripFuel;
+      const option3 = mzfw + takeoffFuel;
+
+      const rtow = Math.min(option1, option2, option3);
+
+      let extraFuel = 0;
+      if (rtow === option3) {
+        extraFuel = Math.min(option1, option2) - option3;
+      }
+
+      const totalFuel = Math.min(option1, option2) - azfw;
+
+      document.getElementById('result').innerHTML = `
+        <p><strong>Calculated OTOW:</strong> ${otow.toFixed(2)} kg</p>
+        <p><strong>Option 1 (OTOW):</strong> ${option1.toFixed(2)} kg</p>
+        <p><strong>Option 2 (OLW + Trip Fuel):</strong> ${option2.toFixed(2)} kg</p>
+        <p><strong>Option 3 (MZFW + Takeoff Fuel):</strong> ${option3.toFixed(2)} kg</p>
+        <hr>
+        <p><strong>RTOW:</strong> ${rtow.toFixed(2)} kg</p>
+        <p><strong>Extra Fuel:</strong> ${Math.max(extraFuel, 0).toFixed(2)} kg</p>
+        <p><strong>Total Fuel:</strong> ${Math.max(totalFuel, 0).toFixed(2)} kg</p>
+      `;
+    }
+  </script>
+
+</body>
+</html>
